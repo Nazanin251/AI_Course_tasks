@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from PIL import Image
+import math
 
 menu=st.sidebar.radio(
     "Choose an Option",
@@ -39,3 +40,39 @@ if menu=="🖼Image Gallery":
                 caption=uploaded_file.name,
                 use_container_width=True , width=10
             )
+
+if menu=="📊CSV Uploader":
+    st.title("CSV Uploader & Interactive Table")
+    uploaded = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx"])
+    if uploaded is not None:
+        if uploaded.name.endswith(".csv"):
+            try:
+                df = pd.read_csv(uploaded, sep=None, engine="python")
+            except Exception:
+                df = pd.read_csv(uploaded)
+        else:
+            df = pd.read_excel(uploaded)
+
+        st.success("✅ File loaded successfully!")
+        st.title("Data Table")
+        numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+        st.caption("Sort by column")
+        sort_col = st.selectbox("", options=["— No Sort —"] + numeric_cols, index=0)
+        if sort_col != "— No Sort —":
+            df = df.sort_values(by=sort_col, ascending=True, kind="mergesort")
+
+        PAGE_SIZE = 20
+        total_rows = len(df)
+        total_pages = max(1, math.ceil(total_rows / PAGE_SIZE))
+
+        st.caption("Select page")
+        page = st.slider("", min_value=1, max_value=total_pages, value=1, step=1)
+
+        start = (page - 1) * PAGE_SIZE
+        end = min(start + PAGE_SIZE, total_rows)
+        page_df = df.iloc[start:end]
+
+        st.dataframe(page_df, use_container_width=True, hide_index=True)
+
+    else:
+        st.info("⬅️ Please upload a CSV or Excel file to start.")
